@@ -1,7 +1,6 @@
 @ECHO OFF
 COLOR A
 SET CUR_DIR=%~dp0
-IF NOT EXIST %CUR_DIR% GOTO CURRENT_DIRECTORY_NOT_FOUND 
 GOTO CHECK_ADMIN_PERMS
 
 :SHOW_MAIN_MENU
@@ -9,37 +8,161 @@ GOTO CHECK_ADMIN_PERMS
 	COLOR A
 	ECHO Vista Optimizer Script
 	ECHO [ 1 ] - Optimize Vista for SSD (Solid State Drive)
-	ECHO [ 2 ] - Disable Unnecessary Services
-	ECHO [ 3 ] - Re-Enable Unnecessary Services
-	ECHO [ 4 ] - Disable Windows Defender
-	ECHO [ 5 ] - Enable Windows Defender
-	ECHO [ 6 ] - Disable Unnecessary Scheduled Tasks
-	ECHO [ 7 ] - Re-Enable Unnecessary Scheduled Tasks
-	ECHO [ 8 ] - Disable UAC (User Account Control)
-	ECHO [ 9 ] - Re-Enable UAC (User Account Control)
-	ECHO [ 10 ] - About
-	SET /P SELECTION="[1, 2, 3, 4, 5, 6, 7, 8, 9] > "
-	IF %SELECTION% == 1 GOTO OPTIMIZE_FOR_SSD
-	IF %SELECTION% == 2 GOTO DISABLE_UNNECESSARY_SERVICES
-	IF %SELECTION% == 3 GOTO ENABLE_UNNECESSARY_SERVICES
-	IF %SELECTION% == 4 GOTO DISABLE_WINDOWS_DEFENDER
-	IF %SELECTION% == 5 GOTO ENABLE_WINDOWS_DEFENDER
-	IF %SELECTION% == 6 GOTO DISABLE_SCH_TASKS
-	IF %SELECTION% == 7 GOTO ENABLE_SCH_TASKS
-	IF %SELECTION% == 8 GOTO DISABLE_UAC
-	IF %SELECTION% == 9 GOTO ENABLE_UAC
-	IF %SELECTION% == 10 GOTO ABOUT_SCRIPT
+	ECHO [ 2 ] - Unnecessary Services
+	ECHO [ 3 ] - Windows Defender
+	ECHO [ 4 ] - Unnecessary Scheduled Tasks
+	ECHO [ 5 ] - UAC (User Account Control)
+	ECHO [ 6 ] - About
+	SET /P SELECTION="[1, 2, 3, 4, 5, 6] > "
+	IF %SELECTION% == 1 GOTO OPTIMIZE_FOR_SSD_MENU
+	IF %SELECTION% == 2 GOTO UN_SERVICE_MENU
+	IF %SELECTION% == 3 GOTO WIN_DEFENDER_MENU
+	IF %SELECTION% == 4 GOTO UN_SCHEDULED_TASK_MENU
+	IF %SELECTION% == 5 GOTO UAC_MENU
+	IF %SELECTION% == 6 GOTO ABOUT_SCRIPT
 	GOTO SHOW_MAIN_MENU
 
+:OPTIMIZE_FOR_SSD_MENU
+	CLS
+	COLOR A
+	ECHO [ 1 ] - Optimize
+	ECHO [ 2 ] - Redo Optimize
+	ECHO [ 3 ] - Back to main menu
+	SET /P SELECTION="[1, 2, 3] > "
+	IF %SELECTION% == 1 GOTO OPTIMIZE_FOR_SSD_CHANGE
+	IF %SELECTION% == 2 GOTO OPTIMIZE_FOR_SSD_REDOCHANGE
+	IF %SELECTION% == 3 GOTO START_SCRIPT
+	GOTO OPTIMIZE_FOR_SSD_MENU
+	
+:OPTIMIZE_FOR_SSD_CHANGE
+	GOTO THIS_FUNC_IS_NOT_DONE
+	
+:OPTIMIZE_FOR_SSD_REDOCHANGE
+	GOTO THIS_FUNC_IS_NOT_DONE
+	
+:UN_SERVICE_MENU
+	CLS
+	COLOR A
+	ECHO [ 1 ] - Disable Unnecessary Services
+	ECHO [ 2 ] - Enable Unnecessary Services
+	ECHO [ 3 ] - Back to main menu
+	SET /P SELECTION="[1, 2, 3] > "
+	IF %SELECTION% == 1 GOTO UN_SERVICE_DISABLE
+	IF %SELECTION% == 2 GOTO UN_SERVICE_ENABLE
+	IF %SELECTION% == 3 GOTO START_SCRIPT
+	GOTO UN_SERVICE_MENU
+
+:UN_SERVICE_DISABLE
+	CLS
+	SET USL="LanmanWorkstation" "wuauserv" "WMPNetworkSvc" "MpsSvc" "WerSvc" "WinDefend" "VSS" "TermService" "TabletInputService" "slsvc" "wscsvc" "EMDMgmt" "Spooler" "PcaSvc" "CscService"
+	SET USL=%USL%;"swprv" "TrkWks" "LanmanServer"
+	FOR %%A IN (%USL%) DO (
+		NET STOP %%A /Y >NUL 2>&1 
+		IF NOT %ERRORLEVEL% == 0 (
+			ECHO Failed to disable %%A
+		)
+		SC CONFIG %%A start= disabled >NUL 2>&1 
+	)
+	GOTO COMMAND_SUCCESSFUL
+	
+:UN_SERVICE_ENABLE
+	CLS
+	SET USL="LanmanWorkstation" "wuauserv" "WMPNetworkSvc" "MpsSvc" "WerSvc" "WinDefend" "VSS" "TermService" "TabletInputService" "slsvc" "wscsvc" "EMDMgmt" "Spooler" "PcaSvc" "CscService"
+	SET USL=%USL%;"swprv" "TrkWks" "LanmanServer"
+	FOR %%A IN (%USL%) DO (
+		SC CONFIG %%A start= auto >NUL 2>&1 
+	)
+	GOTO COMMAND_SUCCESSFUL
+	
+:WIN_DEFENDER_MENU
+	CLS
+	COLOR A
+	ECHO [ 1 ] - Disable Windows Defender
+	ECHO [ 2 ] - Enable Windows Defender
+	ECHO [ 3 ] - Back to main menu
+	SET /P SELECTION="[1, 2, 3] > "
+	IF %SELECTION% == 1 GOTO WIN_DEFENDER_DISABLE
+	IF %SELECTION% == 2 GOTO WIN_DEFENDER_ENABLE
+	IF %SELECTION% == 3 GOTO START_SCRIPT
+	GOTO WIN_DEFENDER_MENU
+	
+:WIN_DEFENDER_DISABLE
+	CLS
+	ECHO Trying to disable Windows Defender...
+	SC CONFIG "WinDefend" START= DISABLED >NUL 2>&1 
+	NET STOP "WinDefend" /Y >NUL 2>&1
+	REG QUERY "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "Windows Defender" >NUL 2>&1
+	::Value Exists
+	IF %errorlevel% == 0 (
+		REG DELETE "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "Windows Defender" /F
+	)
+	TASKKILL /F /IM MSASCui.exe /T
+	GOTO COMMAND_SUCCESSFUL
+	
+:WIN_DEFENDER_ENABLE
+	CLS
+	ECHO Trying to enable Windows Defender...
+	SC CONFIG "WinDefend" START= AUTO >NUL 2>&1 
+	NET START "WinDefend" >NUL 2>&1
+	REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "Windows Defender" /T REG_SZ /D "%ProgramFiles%\Windows Defender\MSASCui.exe -hide"
+	GOTO COMMAND_SUCCESSFUL
+	
+:UN_SCHEDULED_TASK_MENU
+	CLS
+	COLOR A
+	ECHO [ 1 ] - Disable Unnecessary Scheduled Tasks
+	ECHO [ 2 ] - Enable Unnecessary Scheduled Tasks
+	ECHO [ 3 ] - Back to main menu
+	SET /P SELECTION="[1, 2, 3] > "
+	IF %SELECTION% == 1 GOTO UN_SCHEDULED_TASK_DISABLE
+	IF %SELECTION% == 2 GOTO UN_SCHEDULED_TASK_ENABLE
+	IF %SELECTION% == 3 GOTO START_SCRIPT
+	GOTO UN_SCHEDULED_TASK_MENU
+	
+:UN_SCHEDULED_TASK_DISABLE
+	CLS
+	CALL :SCH_TASK_FUNCTION 1
+	
+:UN_SCHEDULED_TASK_ENABLE
+	CLS
+	CALL :SCH_TASK_FUNCTION 0
+	
+:UAC_MENU
+	CLS
+	COLOR A
+	ECHO [ 1 ] - Disable UAC (User Account Control)
+	ECHO [ 2 ] - Enable UAC (User Account Control)
+	ECHO [ 3 ] - Back to main menu
+	SET /P SELECTION="[1, 2, 3] > "
+	IF %SELECTION% == 1 GOTO UAC_DISABLE
+	IF %SELECTION% == 2 GOTO UAC_ENABLE
+	IF %SELECTION% == 3 GOTO START_SCRIPT
+	GOTO UAC_MENU
+
+:UAC_DISABLE
+	CLS
+	REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /V EnableLUA /T REG_DWORD /D 0 /F >NUL 2>&1
+	ECHO System reboot may be required...
+	TIMEOUT 3 /NOBREAK > NUL
+	GOTO COMMAND_SUCCESSFUL
+
+:UAC_ENABLE
+	CLS
+	REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /V EnableLUA /T REG_DWORD /D 1 /F >NUL 2>&1
+	ECHO System reboot may be required...
+	TIMEOUT 3 /NOBREAK > NUL
+	GOTO COMMAND_SUCCESSFUL
+
 :CHECK_ADMIN_PERMS
-	NET SESSION >NUL 2>&1 
-	IF NOT %ERRORLEVEL% == 0 GOTO NO_ADMIN_PERMS
-	GOTO START
+	OPENFILES >NUL 2>&1
+	IF NOT %ERRORLEVEL% == 0 ( GOTO NO_ADMIN_PERMS )
+	GOTO START_SCRIPT
 	
 :NO_ADMIN_PERMS
 	CLS
 	COLOR C
 	ECHO Please run this script as Administrator!
+	ECHO\
 	GOTO EXIT_PRESS_KEY
 	
 :CURRENT_DIRECTORY_NOT_FOUND
@@ -48,7 +171,8 @@ GOTO CHECK_ADMIN_PERMS
 	ECHO Current directory not found ? 
 	GOTO EXIT_PRESS_KEY
 
-:START
+:START_SCRIPT
+	IF NOT EXIST %CUR_DIR% GOTO CURRENT_DIRECTORY_NOT_FOUND 
 	GOTO SHOW_MAIN_MENU
 
 :EXIT_PRESS_KEY
@@ -61,58 +185,6 @@ GOTO CHECK_ADMIN_PERMS
 	ECHO Command executed... Returning to main menu...
 	TIMEOUT 3 /NOBREAK > NUL
 	GOTO SHOW_MAIN_MENU
-	
-:OPTIMIZE_FOR_SSD
-	CLS
-	COLOR C
-	ECHO Do you really want to do it ? There's no way to restore those settings later!
-	ECHO [1] - Yes
-	ECHO [2] - No
-	SET /P SELECTION="[1, 2] > "
-	IF NOT %SELECTION% == 1 GOTO COMMAND_SUCCESSFUL
-	
-	CLS
-	COLOR A
-	ECHO Currently, this function is not done. Press any key to continue
-	PAUSE > NUL
-	GOTO COMMAND_SUCCESSFUL
-
-:DISABLE_UNNECESSARY_SERVICES
-	CLS
-	SET USL="LanmanWorkstation" "wuauserv" "WMPNetworkSvc" "MpsSvc" "WerSvc" "WinDefend" "VSS" "TermService" "TabletInputService" "slsvc" "LanmanServer" "wscsvc" "EMDMgmt" "Spooler" "PcaSvc" "CscService"
-	SET USL=%USL%;"swprv" "TrkWks"
-	FOR %%A IN (%USL%) DO (
-		NET STOP %%A /Y >NUL 2>&1 
-		IF NOT %ERRORLEVEL% == 0 (
-			ECHO Failed to disable %%A
-		)
-		SC CONFIG %%A start= disabled >NUL 2>&1 
-	)
-	GOTO COMMAND_SUCCESSFUL
-
-:ENABLE_UNNECESSARY_SERVICES
-	CLS
-	SET USL="LanmanWorkstation" "wuauserv" "WMPNetworkSvc" "MpsSvc" "WerSvc" "WinDefend" "VSS" "TermService" "TabletInputService" "slsvc" "LanmanServer" "wscsvc" "EMDMgmt" "Spooler" "PcaSvc" "CscService"
-	SET USL=%USL%;"swprv" "TrkWks"
-	FOR %%A IN (%USL%) DO (
-		SC CONFIG %%A start= auto >NUL 2>&1 
-	)
-	GOTO COMMAND_SUCCESSFUL
-	
-:DISABLE_WINDOWS_DEFENDER
-	CLS
-	ECHO Trying to disable Windows Defender...
-	SC CONFIG "WinDefend" START= DISABLED >NUL 2>&1 
-	NET STOP "WinDefend" /Y >NUL 2>&1 
-	TASKKILL /F /IM MSASCui.exe /T
-	GOTO COMMAND_SUCCESSFUL
-	
-:ENABLE_WINDOWS_DEFENDER
-	CLS
-	ECHO Trying to enable Windows Defender...
-	SC CONFIG "WinDefend" START= AUTO >NUL 2>&1 
-	NET START "WinDefend" >NUL 2>&1
-	GOTO COMMAND_SUCCESSFUL
 	
 :SCH_TASK_FUNCTION
 	IF %~1 == 1 ( SET ARG="/Disable" ) ELSE ( SET ARG="/Enable" )
@@ -136,28 +208,6 @@ GOTO CHECK_ADMIN_PERMS
 	schtasks /change /tn "\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticResolver" %ARG% >NUL 2>&1 
 	GOTO COMMAND_SUCCESSFUL
 	
-:DISABLE_SCH_TASKS
-	CLS
-	CALL :SCH_TASK_FUNCTION 1
-
-:ENABLE_SCH_TASKS
-	CLS
-	CALL :SCH_TASK_FUNCTION 0
-	
-:DISABLE_UAC
-	REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f
-	CLS
-	ECHO System reboot may be required...
-	TIMEOUT 3 /NOBREAK > NUL
-	GOTO COMMAND_SUCCESSFUL
-
-:ENABLE_UAC
-	REG ADD "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 1 /f
-	CLS
-	ECHO System reboot may be required...
-	TIMEOUT 3 /NOBREAK > NUL
-	GOTO COMMAND_SUCCESSFUL
-	
 :ABOUT_SCRIPT
 	CLS
 	ECHO Build date : July 2nd 2022
@@ -170,6 +220,11 @@ GOTO CHECK_ADMIN_PERMS
 	ECHO\
 	ECHO Press any key to return to menu...
 	PAUSE > NUL
-	GOTO START
+	GOTO START_SCRIPT
 	
-GOTO START
+:THIS_FUNC_IS_NOT_DONE
+	CLS
+	COLOR E
+	ECHO This function is not currently done, returning to main menu ...
+	TIMEOUT 3 /NOBREAK > NUL
+	GOTO START_SCRIPT
